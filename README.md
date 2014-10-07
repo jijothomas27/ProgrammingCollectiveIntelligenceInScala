@@ -1,1 +1,4 @@
-I am reading 'Programming Collective Intelligence' by Toby Segaran (ISBN: 978-0-596-52932-1). This is my attempt to translate the code in python to scala. 
+Programming Collective Intelligence in Scala
+============================================
+
+I am reading **'[Programming Collective Intelligence](http://shop.oreilly.com/product/9780596529321.do)'** by **Toby Segaran**. This is my attempt to translate the code from **Python** to **Scala**. 
