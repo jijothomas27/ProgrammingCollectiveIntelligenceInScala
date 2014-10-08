@@ -14,4 +14,17 @@ class Recommendations$Test extends FunSuite {
   test("Similarity score for 'Lisa Rose' and 'Gene Seymour'") {
     assert(Recommendations.simDistance(Recommendations.critics,"Lisa Rose","Gene Seymour") == 0.29429805508554946)
   }
+
+  test ("Similarity score for 'Lisa Rose' and non member") {
+    assert(Recommendations.simDistance(Recommendations.critics,"Lisa Rose","Thoma") == 0)
+  }
+
+  test("topMatches for toby should have lisa rose first") {
+    val topMatches = Recommendations.topMatches(Recommendations.critics,"Toby")
+
+    assert(topMatches.nonEmpty)
+
+    val (topPerson,score) = topMatches(0)
+    assert(topPerson == "Lisa Rose")
+  }
 }
