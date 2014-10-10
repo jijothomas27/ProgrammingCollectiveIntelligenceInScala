@@ -7,6 +7,7 @@ object Recommendations {
 
    type Preferences = Map[String,Map[String,Double]]
    type Similarity = (Preferences,String,String) => Double
+   type ItemSimilarity = Map[String,List[(String, Double)]]
 
    def critics: Preferences =Map("Lisa Rose"-> Map("Lady in the Water"-> 2.5, "Snakes on a Plane"-> 3.5,
     "Just My Luck"-> 3.0, "Superman Returns"-> 3.5, "You, Me and Dupree"-> 2.5,
@@ -55,6 +56,13 @@ object Recommendations {
 
   }
 
+  /**
+   * Calculates similarity using the pearson's correlation coefficient method
+   * @param prefs
+   * @param person1
+   * @param person2
+   * @return
+   */
   def simPearson(prefs:Preferences,person1:String,person2:String):Double = {
     val si = for {
       (item,value) <- prefs(person1)
@@ -143,4 +151,45 @@ object Recommendations {
 
     transform
   }
+
+  def calculateSimilarities(prefs:Preferences,count:Int=10,similarity:Similarity=Recommendations.simPearson):Map[String,List[(String,Double)]] = {
+    val itemPrefs = this.transformPrefs(prefs)
+
+    val similarities = for {
+      (item,p) <- itemPrefs
+      scores = this.topMatches(itemPrefs,item,count,similarity)
+    } yield item -> scores
+
+    similarities
+  }
+
+  def getRecommendedItems (prefs:Preferences,itemSimilarities:ItemSimilarity,user:String):List[(String,Double)] = {
+
+    /* get the user's ratings */
+    val userRatings = prefs(user)
+
+    /* For every item in user's list, calculate similarity with all the other items*/
+    val similarityTable = (for {
+      (item,rating) <- userRatings
+
+      /* create the similarity similarity table for each item not present in user's items */
+      similarityScores = for {
+        (otherItem,similarity) <- itemSimilarities(item).filter{case (oi,v) => !userRatings.contains(oi)}
+      } yield otherItem -> (similarity,similarity*rating)
+    } yield similarityScores).flatten.groupBy{case (k,v) => k}
+
+    /* we got the table. Now normalise the list
+    * for each item, calculate the sum of similarities (sigmaSim) and similarity*ratings (sigmaSimRating)
+    * item rating = sigmaSimRating/sigmaSim
+    * */
+    val recommendations = for {
+      (item,scores) <- similarityTable
+      sigmaSim = scores.foldLeft(0.0) {case (a,(m,(s,sr))) => a+s}
+      sigmaRating = scores.foldLeft(0.0) {case (a,(m,(s,sr))) => a+sr}
+    } yield item -> (sigmaRating/sigmaSim)
+
+    recommendations.toList.sortBy{case (item,score) => score}.reverse
+   }
+
 }
+
