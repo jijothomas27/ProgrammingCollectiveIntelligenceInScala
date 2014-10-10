@@ -89,4 +89,47 @@ object Recommendations {
     val sorted = scores.sortBy{case (p,score) => score}
     sorted.reverse.take(n)
   }
+
+
+  def getRecommendations(
+       prefs:Preferences,me:String,similarity:Similarity=Recommendations.simPearson):List[(String,Double)] = {
+
+    /* First lets get preferences of all the people except me */
+    val otherPrefs = prefs.filter {case (key,value) => key != me}
+
+    /* calculate similarities with others */
+    val similarities = otherPrefs.map{case (other,p) =>  other -> similarity(prefs,me,other)}
+
+    /* calculate sum of all similarities */
+    //val sigmaSim = similarities.filter{case (p,s) => s > 0}.foldLeft(0.0){case (a,(p,s)) => a+s}
+
+    /* for every reviewer x
+      calculate mi*simx ;
+        mi = score for movie i
+        simx = similarity score for the reviewer x*/
+    val sim = for {
+      (other,op) <- otherPrefs
+      simScore = similarities(other)
+      ms = (for {
+        (movie,score) <- op.filter {case (m,s) => !prefs(me).contains(m)}
+      } yield (movie,score*simScore,simScore)).toList
+      if(simScore > 0)
+    } yield other -> ms
+
+
+    /* group the list by movies */
+    val sw = sim.map(_.swap).map {case (k,v) => k }.flatten.groupBy {case (m,s,ss) => m}
+
+    /* calculate the rating by
+    * dividing total scores got for each movie by the sum of all similarities */
+    val ratings = for {
+      (movie,movieScores) <- sw
+      total = movieScores.foldLeft(0.0){case (a,(m,s,ss)) => a+s}
+      sigmaSim = movieScores.foldLeft(0.0){case (a,(m,s,ss)) => a+ss}
+    } yield (movie -> (total / sigmaSim))
+
+    ratings.toList.sortBy{case (movie,score) => score}.reverse
+  }
+
+
 }
