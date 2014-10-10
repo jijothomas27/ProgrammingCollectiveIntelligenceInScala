@@ -131,5 +131,16 @@ object Recommendations {
     ratings.toList.sortBy{case (movie,score) => score}.reverse
   }
 
+  def transformPrefs (prefs:Preferences):Preferences = {
+    val movies =  prefs.map(_.swap).map{case (rating,reviewer) => rating.map {case (movie,score) => movie -> (reviewer,score)}.toList}.flatten.groupBy{case (movie,(reviewer,score)) => movie}
 
+    val transform = for {
+      (movie,list) <- movies
+      reviewers = (for {
+        (m,(reviewer,score)) <- list
+      } yield (reviewer->score)).toMap
+    } yield movie -> reviewers
+
+    transform
+  }
 }
